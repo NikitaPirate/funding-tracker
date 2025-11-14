@@ -23,7 +23,7 @@ async def register_contracts(
     mv_refresher: MaterializedViewRefresher | None = None,
 ) -> None:
     """Sync contracts from API; marks missing as deprecated, signals MV refresher."""
-    logger.info(f"Starting contract sync for {section_name}")
+    logger.debug(f"Starting contract sync for {section_name}")
 
     api_contracts = await exchange_adapter.get_contracts()
     logger.debug(f"Fetched {len(api_contracts)} contracts from {section_name} API")
@@ -56,7 +56,7 @@ async def register_contracts(
                 deprecated_count += 1
 
         if deprecated_count > 0:
-            logger.info(f"Marked {deprecated_count} contracts as deprecated")
+            logger.debug(f"Marked {deprecated_count} contracts as deprecated")
 
         contracts_to_upsert = [
             Contract(

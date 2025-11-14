@@ -39,7 +39,7 @@ async def get_contracts() -> list[ContractInfo]:
             )
         )
 
-    logger.info(f"Fetched {len(contracts)} contracts from {EXCHANGE_ID}")
+    logger.debug(f"Fetched {len(contracts)} contracts from {EXCHANGE_ID}")
     return contracts
 
 
@@ -102,5 +102,5 @@ async def fetch_live_batch() -> dict[str, FundingPoint]:
                 timestamp=now,
             )
 
-    logger.info(f"Fetched {len(rates)} live rates from {EXCHANGE_ID}")
+    logger.debug(f"Fetched {len(rates)} live rates from {EXCHANGE_ID}")
     return rates

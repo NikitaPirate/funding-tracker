@@ -20,6 +20,9 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
 )
 
+# Reduce noise from third-party libraries
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 

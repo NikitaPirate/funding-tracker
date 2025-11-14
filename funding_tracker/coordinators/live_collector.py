@@ -99,6 +99,15 @@ async def collect_live(
 
     success_count = len(live_records)
     failure_count = len(contracts) - success_count
-    logger.info(
-        f"Live rate collection for {section_name}: {success_count} success, {failure_count} failed"
-    )
+
+    # Only log at INFO level if there were failures
+    if failure_count > 0:
+        logger.info(
+            f"Live rate collection for {section_name}: "
+            f"{success_count} success, {failure_count} failed"
+        )
+    else:
+        logger.debug(
+            f"Live rate collection for {section_name}: "
+            f"all {success_count} rates collected successfully"
+        )

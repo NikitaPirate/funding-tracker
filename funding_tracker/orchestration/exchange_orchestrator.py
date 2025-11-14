@@ -69,37 +69,51 @@ class ExchangeOrchestrator:
 
         logger.debug(f"Processing {len(contracts)} contracts for {self._section_name}")
 
-        async def process_contract(contract: Contract) -> None:
+        # Track statistics
+        updated_count = 0
+        total_points = 0
+
+        async def process_contract(contract: Contract) -> tuple[int, int]:
+            """Process contract and return (updated_flag, points_count)."""
             async with self._semaphore:
                 try:
                     if not contract.synced:
-                        await sync_contract(
+                        points = await sync_contract(
                             self._exchange_adapter,
                             contract,
                             self._uow_factory,
                             assemble_symbol,
                         )
                     else:
-                        await update_contract(
+                        points = await update_contract(
                             self._exchange_adapter,
                             contract,
                             self._uow_factory,
                             assemble_symbol,
                         )
+                    return (1 if points > 0 else 0, points)
                 except Exception as e:
                     logger.error(
                         f"Failed to process contract {contract.asset.name}/{contract.quote_name} "
                         f"on {self._section_name}: {e}",
                         exc_info=True,
                     )
+                    return (0, 0)
 
         tasks = [process_contract(contract) for contract in contracts]
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks)
+
+        # Aggregate statistics
+        for was_updated, points in results:
+            updated_count += was_updated
+            total_points += points
 
         duration = datetime.now() - start_time
         logger.info(
-            f"Update completed for {self._section_name} in {duration} "
-            f"({len(contracts)} contracts processed)"
+            f"History update for {self._section_name}: "
+            f"{updated_count} contracts updated ({total_points} new points), "
+            f"{len(contracts) - updated_count} unchanged, "
+            f"completed in {duration}"
         )
 
     async def update_live(self) -> None:

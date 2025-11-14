@@ -45,6 +45,5 @@ class MaterializedViewRefresher:
 
     async def _refresh_materialized_views(self) -> None:
         async with self.uow_factory() as uow:
-            self._logger.info("Starting materialized views refresh")
+            self._logger.debug("Starting materialized views refresh")
             await uow.execute_raw("REFRESH MATERIALIZED VIEW CONCURRENTLY contract_enriched;")
-            self._logger.debug("contract_enriched refreshed")
