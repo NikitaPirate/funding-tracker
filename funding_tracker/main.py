@@ -24,6 +24,7 @@ logging.basicConfig(
 # Reduce noise from third-party libraries
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 

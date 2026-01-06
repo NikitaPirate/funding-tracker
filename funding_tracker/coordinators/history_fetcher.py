@@ -46,7 +46,8 @@ async def sync_contract(
 
         async with uow_factory() as uow:
             oldest = await uow.historical_funding_records.get_oldest_for_contract(contract.id)
-            before_timestamp = oldest.timestamp if oldest else None
+            # minus 1 second to avoid refetching the oldest point
+            before_timestamp = oldest.timestamp - timedelta(seconds=1) if oldest else None
 
         logger.debug(
             f"Sync batch #{batch_count} for {symbol}: fetching before {
@@ -58,7 +59,8 @@ async def sync_contract(
 
         if not points:
             async with uow_factory() as uow:
-                contract.synced = True
+                merged_contract = await uow.merge(contract)
+                merged_contract.synced = True
                 await uow.commit()
             logger.debug(
                 f"No more history for {symbol}, marking as synced "

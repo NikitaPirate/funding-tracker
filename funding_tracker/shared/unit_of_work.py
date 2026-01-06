@@ -75,6 +75,10 @@ class UnitOfWorkBase(ABC):
         """Commit the current transaction."""
         await self._session.commit()
 
+    async def merge(self, instance: Any) -> Any:  # noqa: ANN401
+        """Merge a detached instance into the current session."""
+        return await self._session.merge(instance)
+
     async def rollback(self) -> None:
         """Roll back the current transaction."""
         await self._session.rollback()
