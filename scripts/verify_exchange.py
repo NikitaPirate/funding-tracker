@@ -31,7 +31,10 @@ async def verify_exchange(exchange_id: str) -> bool:
     try:
         validate_adapter(adapter, exchange_id)
         console.print(f"  [green]✓[/green] EXCHANGE_ID: {adapter.EXCHANGE_ID}")
-        console.print("  [green]✓[/green] Required methods: get_contracts, fetch_history")
+        console.print(
+            "  [green]✓[/green] Required methods: get_contracts, \
+                fetch_history_before, fetch_history_after"
+        )
 
         has_batch = hasattr(adapter, "fetch_live_batch")
         has_single = hasattr(adapter, "fetch_live")
@@ -70,7 +73,7 @@ async def verify_exchange(exchange_id: str) -> bool:
     # Step 3: Fetch history for first contract
     if contracts:
         test_symbol = contracts[0].asset_name
-        console.print(f"\n[bold]Step 3: API - fetch_history({test_symbol})[/bold]")
+        console.print(f"\n[bold]Step 3: API - fetch_history_after({test_symbol})[/bold]")
         try:
             # Fetch last 7 days of history
             seven_days_ago = datetime.now().replace(
@@ -80,7 +83,7 @@ async def verify_exchange(exchange_id: str) -> bool:
 
             after_ts = dt.fromtimestamp(seven_days_ago)
 
-            history = await adapter.fetch_history(test_symbol, after_ts)
+            history = await adapter.fetch_history_after(test_symbol, after_ts)
             console.print(f"  [green]✓[/green] Retrieved {len(history)} funding points")
 
             if history:
@@ -93,7 +96,7 @@ async def verify_exchange(exchange_id: str) -> bool:
                 console.print(f"  [dim]Sample rate: {sample.rate:.6f} ({rate_pct:.4f}%)[/dim]")
 
         except Exception as e:
-            console.print(f"  [bold red]✗[/bold red] fetch_history() failed: {e}")
+            console.print(f"  [bold red]✗[/bold red] fetch_history_after() failed: {e}")
             return False
 
     # Step 4: Fetch live rates

@@ -57,7 +57,7 @@ def validate_adapter(module: ModuleType, name: str) -> None:
         raise TypeError(f"{name}: EXCHANGE_ID must be str, got {type(module.EXCHANGE_ID)}")
 
     # Check required methods
-    required_methods = ["get_contracts", "fetch_history"]
+    required_methods = ["get_contracts", "fetch_history_before", "fetch_history_after"]
     for method_name in required_methods:
         if not hasattr(module, method_name):
             raise TypeError(f"{name}: missing required method {method_name}()")
@@ -68,8 +68,7 @@ def validate_adapter(module: ModuleType, name: str) -> None:
 
     if not has_batch and not has_individual:
         raise TypeError(
-            f"{name}: must implement at least one of: "
-            f"fetch_live_batch() or fetch_live()"
+            f"{name}: must implement at least one of: fetch_live_batch() or fetch_live()"
         )
 
     # Log which live rate method is available
