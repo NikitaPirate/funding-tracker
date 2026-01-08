@@ -122,13 +122,15 @@ async def update_contract(
 
     async with uow_factory() as uow:
         newest = await uow.historical_funding_records.get_newest_for_contract(contract.id)
+        # add 1 second to avoid refetching already existing point
+        after_timestamp = newest.timestamp + timedelta(seconds=1) if newest else None
 
-        if newest is None:
+        if after_timestamp is None:
             logger.warning(f"No historical data found for {symbol}, run sync first")
             return 0
 
         now = datetime.now()
-        time_since_last = now - newest.timestamp
+        time_since_last = now - after_timestamp
         required_interval = timedelta(hours=contract.funding_interval)
 
         if time_since_last < required_interval:
@@ -138,9 +140,9 @@ async def update_contract(
             )
             return 0
 
-        logger.debug(f"Fetching history for {symbol} after {newest.timestamp}")
+        logger.debug(f"Fetching history for {symbol} after {after_timestamp}")
 
-        points = await exchange_adapter.fetch_history_after(symbol, newest.timestamp)
+        points = await exchange_adapter.fetch_history_after(symbol, after_timestamp)
 
         if not points:
             logger.debug(f"No new funding points for {symbol}")
