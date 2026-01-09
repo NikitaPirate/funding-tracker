@@ -8,11 +8,18 @@ import asyncio
 import sys
 from datetime import datetime
 from importlib import import_module
+from typing import TYPE_CHECKING, cast
 
 from rich.console import Console
 from rich.table import Table
 
+from funding_tracker.coordinators.symbol_assembler import assemble_symbol
 from funding_tracker.exchanges import validate_adapter
+
+if TYPE_CHECKING:
+    from funding_tracker.shared.models import Asset, Contract, Quote
+else:
+    from funding_tracker.shared.models import Asset, Contract, Quote
 
 console = Console()
 
@@ -72,7 +79,18 @@ async def verify_exchange(exchange_id: str) -> bool:
 
     # Step 3: Fetch history for first contract
     if contracts:
-        test_symbol = contracts[0].asset_name
+        # Create a proper Contract object for symbol assembly
+        # We need to create minimal objects for testing
+
+        contract = Contract(
+            asset=Asset(name=contracts[0].asset_name),
+            quote=Quote(name=contracts[0].quote),
+            funding_interval=contracts[0].funding_interval,
+            section_name=exchange_id,
+            asset_name=contracts[0].asset_name,
+            quote_name=contracts[0].quote,
+        )
+        test_symbol = assemble_symbol(exchange_id, cast(Contract, contract))  # type: ignore
         console.print(f"\n[bold]Step 3: API - fetch_history_after({test_symbol})[/bold]")
         try:
             # Fetch last 7 days of history
@@ -118,7 +136,7 @@ async def verify_exchange(exchange_id: str) -> bool:
                 )
 
         elif hasattr(adapter, "fetch_live"):
-            test_symbol = contracts[0].asset_name if contracts else "BTC"
+            test_symbol = assemble_symbol(exchange_id, contract)
             live_rate = await adapter.fetch_live(test_symbol)
             if live_rate:
                 rate_pct = live_rate.rate * 100

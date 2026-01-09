@@ -11,8 +11,11 @@ from funding_tracker.shared.models.contract import Contract
 
 logger = logging.getLogger(__name__)
 
+BYBIT_SUFFIXS = {"USDT": "USDT", "USDC": "PERP"}
+
 SYMBOL_FORMATS: dict[str, Callable[[Contract], str]] = {
     "hyperliquid": lambda contract: contract.asset.name,
+    "bybit": lambda c: f"{c.asset.name}{BYBIT_SUFFIXS[c.quote_name]}",
     # TODO: Add exchanges as migrated:
     # "binance_usdm": lambda c: f"{c.asset.name}{c.quote.name}",
     # "binance_coinm": lambda c: f"{c.asset.name}{c.quote.name}_PERP",
