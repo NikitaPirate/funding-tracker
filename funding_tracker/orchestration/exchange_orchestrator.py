@@ -122,7 +122,6 @@ class ExchangeOrchestrator:
                 self._exchange_adapter,
                 self._section_name,
                 self._uow_factory,
-                self._semaphore,
             )
         except Exception as e:
             logger.error(

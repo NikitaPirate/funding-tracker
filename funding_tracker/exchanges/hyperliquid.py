@@ -85,7 +85,7 @@ class HyperliquidExchange(BaseExchange):
         logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
-    async def fetch_live_batch(self) -> dict[str, FundingPoint]:
+    async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
         logger.debug(f"Fetching live rates batch from {self.EXCHANGE_ID}")
 
         response = await http_client.post(
@@ -112,3 +112,13 @@ class HyperliquidExchange(BaseExchange):
 
         logger.debug(f"Fetched {len(rates)} live rates from {self.EXCHANGE_ID}")
         return rates
+
+    async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:
+        symbol_to_contract = {self._format_symbol(c): c for c in contracts}
+        all_rates = await self._fetch_all_rates()
+
+        return {
+            symbol_to_contract[symbol]: rate
+            for symbol, rate in all_rates.items()
+            if symbol in symbol_to_contract
+        }

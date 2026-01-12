@@ -102,7 +102,7 @@ class BybitExchange(BaseExchange):
         logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
-    async def fetch_live(self, contract: Contract) -> FundingPoint:
+    async def _fetch_live_single(self, contract: Contract) -> FundingPoint:
         symbol = self._format_symbol(contract)
 
         logger.debug(f"Fetching live rate for {self.EXCHANGE_ID}/{symbol}")
@@ -120,3 +120,8 @@ class BybitExchange(BaseExchange):
         now = datetime.now()
         rate = float(record["fundingRate"])
         return FundingPoint(rate=rate, timestamp=now)
+
+    async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:
+        from funding_tracker.exchanges.utils import fetch_live_parallel
+
+        return await fetch_live_parallel(self, contracts)

@@ -11,6 +11,7 @@ class BaseExchange(ABC):
     """Base class for exchange adapters.
 
     Subclasses must implement all abstract methods.
+    Prefer batch API if available; otherwise use fetch_live_parallel().
     """
 
     EXCHANGE_ID: str
@@ -26,19 +27,8 @@ class BaseExchange(ABC):
         """Validate subclass implements required methods."""
         super().__init_subclass__()
 
-        # Check EXCHANGE_ID is defined
         if not hasattr(cls, "EXCHANGE_ID"):
             raise NotImplementedError(f"{cls.__name__}: missing EXCHANGE_ID class attribute")
-
-        # Check at least one live method is implemented (not from BaseExchange)
-        has_batch = "fetch_live_batch" in cls.__dict__
-        has_individual = "fetch_live" in cls.__dict__
-
-        if not has_batch and not has_individual:
-            raise NotImplementedError(
-                f"{cls.__name__}: must implement at least one of: "
-                "fetch_live_batch() or fetch_live()"
-            )
 
     @abstractmethod
     def _format_symbol(self, contract: Contract) -> str:
@@ -88,16 +78,23 @@ class BaseExchange(ABC):
         end_ms = int(datetime.now().timestamp() * 1000)
         return await self._fetch_history(contract, start_ms, end_ms)
 
-    async def fetch_live_batch(self) -> dict[str, FundingPoint]:
-        """[PREFERRED] Get all unsettled rates in one API call."""
-        raise NotImplementedError(
-            f"{self.EXCHANGE_ID}: fetch_live_batch() not implemented. "
-            "Implement fetch_live_batch() or fetch_live()."
-        )
+    @abstractmethod
+    async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:
+        """Fetch unsettled rates for given contracts.
 
-    async def fetch_live(self, contract: Contract) -> FundingPoint:
-        """[FALLBACK] Get unsettled rate for single contract."""
+        Batch API exchanges should override this method.
+        Individual API exchanges should implement _fetch_live_single()
+        and use fetch_live_parallel() from utils.py.
+        """
+        ...
+
+    async def _fetch_live_single(self, contract: Contract) -> FundingPoint:
+        """Fetch single contract rate - override for individual API exchanges.
+
+        Only implement this if exchange lacks batch API.
+        Use fetch_live_parallel() for parallel execution.
+        """
         raise NotImplementedError(
-            f"{self.EXCHANGE_ID}: fetch_live() not implemented. "
-            "Implement fetch_live() or fetch_live_batch()."
+            f"{self.EXCHANGE_ID}: _fetch_live_single() not implemented. "
+            "Override fetch_live() instead."
         )

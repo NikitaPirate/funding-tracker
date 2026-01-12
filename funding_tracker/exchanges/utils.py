@@ -1,6 +1,19 @@
 """Common utilities for exchange adapters."""
 
+import asyncio
+import logging
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+from httpx import HTTPError
+
+from funding_tracker.exchanges.dto import FundingPoint
+from funding_tracker.shared.models.contract import Contract
+
+if TYPE_CHECKING:
+    from funding_tracker.exchanges.base import BaseExchange
+
+logger = logging.getLogger(__name__)
 
 
 def to_ms_timestamp(dt: datetime | None) -> int:
@@ -21,3 +34,35 @@ def from_ms_timestamp(ms: int) -> datetime:
 def from_sec_timestamp(sec: int) -> datetime:
     """Parse seconds timestamp to datetime."""
     return datetime.fromtimestamp(sec)
+
+
+async def fetch_live_parallel(
+    exchange: "BaseExchange",
+    contracts: list[Contract],
+) -> dict[Contract, FundingPoint]:
+    """Fetch live rates using parallel individual API calls.
+
+    Executes requests concurrently with semaphore-controlled rate limiting.
+    Returns dict of successfully fetched contracts; logs and filters failures.
+    """
+
+    async def fetch_one(contract: Contract) -> FundingPoint | None:
+        async with semaphore:
+            try:
+                return await exchange._fetch_live_single(contract)
+            except HTTPError as e:
+                logger.warning(f"Failed to fetch live rate for {contract.asset.name}: {e}")
+                return None
+            except ValueError as e:
+                logger.warning(f"Invalid funding rate data for {contract.asset.name}: {e}")
+                return None
+
+    semaphore = asyncio.Semaphore(10)
+    tasks = [fetch_one(contract) for contract in contracts]
+    results = await asyncio.gather(*tasks)
+
+    return {
+        contract: result
+        for contract, result in zip(contracts, results, strict=True)
+        if result is not None
+    }

@@ -19,17 +19,13 @@ def _validate_exchange(exchange_class: type[BaseExchange], name: str) -> None:
     if not isinstance(exchange_class.EXCHANGE_ID, str):
         raise TypeError(f"{name}: EXCHANGE_ID must be str, got {type(exchange_class.EXCHANGE_ID)}")
 
+    # Note: fetch_live validation handled by @abstractmethod in BaseExchange
     required_methods = ["_format_symbol", "get_contracts", "_fetch_history"]
     for method_name in required_methods:
         if not hasattr(exchange_class, method_name):
             raise TypeError(f"{name}: missing required method {method_name}()")
 
-    has_batch = "fetch_live_batch" in exchange_class.__dict__
-
-    if has_batch:
-        logger.info(f"✓ {name}: uses batch API (optimal)")
-    else:
-        logger.info(f"✓ {name}: uses individual API (fallback)")
+    logger.info(f"✓ {name}: implements fetch_live()")
 
 
 def _build_registry() -> dict[str, BaseExchange]:
