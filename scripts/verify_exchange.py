@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 """Exchange adapter verification script.
 
-Usage: python scripts/verify_exchange.py hyperliquid
+Usage: python scripts/verify_exchange.py <exchange_id>
+
+Examples:
+    python scripts/verify_exchange.py hyperliquid
+    python scripts/verify_exchange.py binance_usd-m
+    python scripts/verify_exchange.py binance_coin-m
+
+Note: This script uses the EXCHANGES registry from exchanges/__init__.py,
+which handles the mapping between exchange IDs (with hyphens) and Python modules.
 """
 
 import asyncio
 import sys
 from datetime import datetime
-from importlib import import_module
 from typing import TYPE_CHECKING, cast
 
 from rich.console import Console
 from rich.table import Table
 
 from funding_tracker.coordinators.symbol_assembler import assemble_symbol
-from funding_tracker.exchanges import validate_adapter
+from funding_tracker.exchanges import EXCHANGES
 
 if TYPE_CHECKING:
     from funding_tracker.shared.models import Asset, Contract, Quote
@@ -27,32 +34,30 @@ console = Console()
 async def verify_exchange(exchange_id: str) -> bool:
     console.print(f"\n🔍 [bold cyan]Verifying exchange adapter: {exchange_id}[/bold cyan]\n")
 
-    try:
-        adapter = import_module(f"funding_tracker.exchanges.{exchange_id}")
-    except ImportError as e:
-        console.print(f"[bold red]✗[/bold red] Failed to import adapter: {e}")
-        return False
-
-    # Step 1: Protocol validation
-    console.print("[bold]Step 1: Protocol Validation[/bold]")
-    try:
-        validate_adapter(adapter, exchange_id)
-        console.print(f"  [green]✓[/green] EXCHANGE_ID: {adapter.EXCHANGE_ID}")
+    # Get adapter from EXCHANGES registry
+    if exchange_id not in EXCHANGES:
         console.print(
-            "  [green]✓[/green] Required methods: get_contracts, \
-                fetch_history_before, fetch_history_after"
+            f"[bold red]✗[/bold red] Exchange '{exchange_id}' not found in EXCHANGES registry. "
+            f"Available exchanges: {list(EXCHANGES.keys())}"
         )
-
-        has_batch = hasattr(adapter, "fetch_live_batch")
-        has_single = hasattr(adapter, "fetch_live")
-        if has_batch:
-            console.print("  [green]✓[/green] Live method: fetch_live_batch")
-        elif has_single:
-            console.print("  [green]✓[/green] Live method: fetch_live")
-
-    except Exception as e:
-        console.print(f"  [bold red]✗[/bold red] Protocol validation failed: {e}")
         return False
+
+    adapter = EXCHANGES[exchange_id]
+
+    # Step 1: Protocol validation (already done during import)
+    console.print("[bold]Step 1: Protocol Validation[/bold]")
+    console.print(f"  [green]✓[/green] EXCHANGE_ID: {adapter.EXCHANGE_ID}")
+    console.print(
+        "  [green]✓[/green] Required methods: get_contracts, "
+        "fetch_history_before, fetch_history_after"
+    )
+
+    has_batch = hasattr(adapter, "fetch_live_batch")
+    has_single = hasattr(adapter, "fetch_live")
+    if has_batch:
+        console.print("  [green]✓[/green] Live method: fetch_live_batch")
+    elif has_single:
+        console.print("  [green]✓[/green] Live method: fetch_live")
 
     # Step 2: Fetch contracts
     console.print("\n[bold]Step 2: API - get_contracts()[/bold]")

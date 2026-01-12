@@ -22,7 +22,7 @@ Example:
 import logging
 from types import ModuleType
 
-from funding_tracker.exchanges import bybit, hyperliquid
+from funding_tracker.exchanges import binance_coinm, binance_usdm, bybit, hyperliquid
 from funding_tracker.exchanges.protocol import ExchangeAdapter
 
 logger = logging.getLogger(__name__)
@@ -91,8 +91,8 @@ def _build_registry() -> dict[str, ExchangeAdapter]:
     adapters = {
         "hyperliquid": hyperliquid,
         "bybit": bybit,
-        # TODO: Add your new adapters here
-        # "binance": binance,
+        "binance_usd-m": binance_usdm,
+        "binance_coin-m": binance_coinm,
     }
 
     registry = {}
@@ -107,4 +107,4 @@ def _build_registry() -> dict[str, ExchangeAdapter]:
 # Registry mapping exchange_id to adapter module (with validation)
 EXCHANGES: dict[str, ExchangeAdapter] = _build_registry()
 
-__all__ = ["EXCHANGES", "ExchangeAdapter", "hyperliquid", "bybit"]
+__all__ = ["EXCHANGES", "ExchangeAdapter", "hyperliquid", "bybit", "binance_usdm", "binance_coinm"]

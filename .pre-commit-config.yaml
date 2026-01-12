@@ -13,7 +13,7 @@ repos:
       # Type checking with pyright
       - id: pyright
         name: pyright
-        entry: uv run pyright
+        entry: uv run pyright --project pyproject.toml funding_tracker
         language: system
         types: [python]
         pass_filenames: false
