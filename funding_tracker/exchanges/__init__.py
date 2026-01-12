@@ -1,110 +1,55 @@
 """Exchange adapters registry.
 
-This module maintains a registry of all available exchange adapters.
-Each adapter is a module implementing the ExchangeAdapter protocol.
-
-To add a new exchange:
-1. Copy exchanges/_template.py to exchanges/{exchange_name}.py
-2. Fill in all TODO sections in the template
-3. Import your adapter module here
-4. Add to EXCHANGES registry below
-5. The validate_adapter() function will automatically check your implementation
-
-Example:
-    from funding_tracker.exchanges import hyperliquid, binance
-
-    EXCHANGES = {
-        "hyperliquid": hyperliquid,
-        "binance": binance,
-    }
+Each exchange is a class implementing BaseExchange ABC.
 """
 
 import logging
-from types import ModuleType
 
 from funding_tracker.exchanges import binance_coinm, binance_usdm, bybit, hyperliquid
-from funding_tracker.exchanges.protocol import ExchangeAdapter
+from funding_tracker.exchanges.base import BaseExchange
 
 logger = logging.getLogger(__name__)
 
 
-def validate_adapter(module: ModuleType, name: str) -> None:
-    """Validate that a module implements the ExchangeAdapter protocol.
+def _validate_exchange(exchange_class: type[BaseExchange], name: str) -> None:
+    """Validate exchange class has EXCHANGE_ID and required methods."""
+    if not hasattr(exchange_class, "EXCHANGE_ID"):
+        raise TypeError(f"{name}: missing EXCHANGE_ID class attribute")
 
-    Performs runtime checks to ensure the adapter has all required attributes
-    and methods. This provides fail-fast error detection during application startup
-    rather than discovering missing methods at runtime.
+    if not isinstance(exchange_class.EXCHANGE_ID, str):
+        raise TypeError(f"{name}: EXCHANGE_ID must be str, got {type(exchange_class.EXCHANGE_ID)}")
 
-    Args:
-        module: The adapter module to validate
-        name: Exchange name for error messages
-
-    Raises:
-        TypeError: If module is missing required attributes or methods,
-                  or if it doesn't implement at least one live rate method
-
-    Checks:
-        - EXCHANGE_ID attribute exists and is a string
-        - get_contracts() method exists
-        - fetch_history() method exists
-        - At least one of: fetch_live_batch() or fetch_live() exists
-    """
-    # Check required constant
-    if not hasattr(module, "EXCHANGE_ID"):
-        raise TypeError(f"{name}: missing required attribute EXCHANGE_ID")
-
-    if not isinstance(module.EXCHANGE_ID, str):
-        raise TypeError(f"{name}: EXCHANGE_ID must be str, got {type(module.EXCHANGE_ID)}")
-
-    # Check required methods
-    required_methods = ["get_contracts", "fetch_history_before", "fetch_history_after"]
+    required_methods = ["_format_symbol", "get_contracts", "_fetch_history"]
     for method_name in required_methods:
-        if not hasattr(module, method_name):
+        if not hasattr(exchange_class, method_name):
             raise TypeError(f"{name}: missing required method {method_name}()")
 
-    # Check live rate methods - at least one required
-    has_batch = hasattr(module, "fetch_live_batch")
-    has_individual = hasattr(module, "fetch_live")
+    has_batch = "fetch_live_batch" in exchange_class.__dict__
 
-    if not has_batch and not has_individual:
-        raise TypeError(
-            f"{name}: must implement at least one of: fetch_live_batch() or fetch_live()"
-        )
-
-    # Log which live rate method is available
     if has_batch:
-        logger.info(f"✓ {name}: validated (uses batch API - optimal)")
+        logger.info(f"✓ {name}: uses batch API (optimal)")
     else:
-        logger.info(f"✓ {name}: validated (uses individual API - fallback)")
+        logger.info(f"✓ {name}: uses individual API (fallback)")
 
 
-# Validate and register adapters
-def _build_registry() -> dict[str, ExchangeAdapter]:
-    """Build EXCHANGES registry with validation.
-
-    Returns:
-        Dict mapping exchange_id to validated adapter module
-
-    Raises:
-        TypeError: If any adapter fails validation
-    """
-    adapters = {
-        "hyperliquid": hyperliquid,
-        "bybit": bybit,
-        "binance_usd-m": binance_usdm,
-        "binance_coin-m": binance_coinm,
+def _build_registry() -> dict[str, BaseExchange]:
+    """Build EXCHANGES registry with validation and instantiation."""
+    exchange_classes: dict[str, type[BaseExchange]] = {
+        "hyperliquid": hyperliquid.HyperliquidExchange,
+        "bybit": bybit.BybitExchange,
+        "binance_usd-m": binance_usdm.BinanceUsdmExchange,
+        "binance_coin-m": binance_coinm.BinanceCoinmExchange,
     }
 
     registry = {}
-    for name, module in adapters.items():
-        validate_adapter(module, name)
-        registry[name] = module
+    for name, cls in exchange_classes.items():
+        _validate_exchange(cls, name)
+        registry[name] = cls()
 
     logger.info(f"Exchange adapter registry initialized with {len(registry)} exchanges")
     return registry
 
 
-# Registry mapping exchange_id to adapter module (with validation)
-EXCHANGES: dict[str, ExchangeAdapter] = _build_registry()
+EXCHANGES: dict[str, BaseExchange] = _build_registry()
 
-__all__ = ["EXCHANGES", "ExchangeAdapter", "hyperliquid", "bybit", "binance_usdm", "binance_coinm"]
+__all__ = ["EXCHANGES", "BaseExchange"]

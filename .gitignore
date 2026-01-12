@@ -65,3 +65,6 @@ docker-compose.override.yaml
 
 # OS
 Thumbs.db
+
+# AI agents
+CLAUDE.md

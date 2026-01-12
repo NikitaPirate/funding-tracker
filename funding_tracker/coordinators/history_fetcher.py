@@ -1,7 +1,6 @@
 """Historical funding data fetcher."""
 
 import logging
-from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -10,7 +9,7 @@ from funding_tracker.shared.models.historical_funding_point import HistoricalFun
 from funding_tracker.unit_of_work import UOWFactoryType
 
 if TYPE_CHECKING:
-    from funding_tracker.exchanges.protocol import ExchangeAdapter
+    from funding_tracker.exchanges.base import BaseExchange
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +18,9 @@ PROGRESS_LOG_BATCH_INTERVAL = 10
 
 
 async def sync_contract(
-    exchange_adapter: "ExchangeAdapter",
+    exchange_adapter: "BaseExchange",
     contract: Contract,
     uow_factory: UOWFactoryType,
-    assemble_symbol: Callable[[str, Contract], str],
 ) -> int:
     """Fetch backwards until no more data; marks contract as synced.
 
@@ -40,7 +38,6 @@ async def sync_contract(
         f"Starting sync for {contract.asset.name}/{contract.quote_name} on {contract.section_name}"
     )
 
-    symbol = assemble_symbol(contract.section_name, contract)
     total_points = 0
     batch_count = 0
 
@@ -53,12 +50,11 @@ async def sync_contract(
             before_timestamp = oldest.timestamp - timedelta(seconds=1) if oldest else None
 
         logger.debug(
-            f"Sync batch #{batch_count} for {symbol}: fetching before {
-                before_timestamp or 'beginning'
-            }"
+            f"Sync batch #{batch_count} for {contract.asset.name}/{contract.quote_name}: "
+            f"fetching before {before_timestamp or 'beginning'}"
         )
 
-        points = await exchange_adapter.fetch_history_before(symbol, before_timestamp)
+        points = await exchange_adapter.fetch_history_before(contract, before_timestamp)
 
         if not points:
             async with uow_factory() as uow:
@@ -66,8 +62,8 @@ async def sync_contract(
                 merged_contract.synced = True
                 await uow.commit()
             logger.info(
-                f"No more history for {symbol}, marking as synced "
-                f"(total batches: {batch_count}, total points: {total_points})"
+                f"No more history for {contract.asset.name}/{contract.quote_name}, "
+                f"marking as synced (total batches: {batch_count}, total points: {total_points})"
             )
             break
 
@@ -88,7 +84,8 @@ async def sync_contract(
         total_points += batch_points
 
         logger.debug(
-            f"Sync batch #{batch_count} for {symbol}: {batch_points} points "
+            f"Sync batch #{batch_count} for {contract.asset.name}/{contract.quote_name}: "
+            f"{batch_points} points "
             f"(oldest: {min(p.timestamp for p in points)}, "
             f"newest: {max(p.timestamp for p in points)})"
         )
@@ -96,21 +93,19 @@ async def sync_contract(
         # Log progress periodically
         if batch_count % PROGRESS_LOG_BATCH_INTERVAL == 0:
             logger.info(
-                f"Sync progress for {symbol}: batch #{batch_count}, "
-                f"{total_points} total points fetched, "
-                f"latest batch range: {min(p.timestamp for p in points)} to {
-                    max(p.timestamp for p in points)
-                }"
+                f"Sync progress for {contract.asset.name}/{contract.quote_name}: "
+                f"batch #{batch_count}, {total_points} total points fetched, "
+                f"latest batch range: {min(p.timestamp for p in points)} to "
+                f"{max(p.timestamp for p in points)}"
             )
 
     return total_points
 
 
 async def update_contract(
-    exchange_adapter: "ExchangeAdapter",
+    exchange_adapter: "BaseExchange",
     contract: Contract,
     uow_factory: UOWFactoryType,
-    assemble_symbol: Callable[[str, Contract], str],
 ) -> int:
     """Fetch new data after latest point; skips if interval not elapsed."""
     logger.debug(
@@ -118,15 +113,16 @@ async def update_contract(
         f"on {contract.section_name}"
     )
 
-    symbol = assemble_symbol(contract.section_name, contract)
-
     async with uow_factory() as uow:
         newest = await uow.historical_funding_records.get_newest_for_contract(contract.id)
         # add 1 second to avoid refetching already existing point
         after_timestamp = newest.timestamp + timedelta(seconds=1) if newest else None
 
         if after_timestamp is None:
-            logger.warning(f"No historical data found for {symbol}, run sync first")
+            logger.warning(
+                f"No historical data found for {contract.asset.name}/{contract.quote_name}, "
+                f"run sync first"
+            )
             return 0
 
         now = datetime.now()
@@ -135,17 +131,20 @@ async def update_contract(
 
         if time_since_last < required_interval:
             logger.debug(
-                f"Skipping update for {symbol}, only {time_since_last} "
-                f"passed (need {required_interval})"
+                f"Skipping update for {contract.asset.name}/{contract.quote_name}, "
+                f"only {time_since_last} passed (need {required_interval})"
             )
             return 0
 
-        logger.debug(f"Fetching history for {symbol} after {after_timestamp}")
+        logger.debug(
+            f"Fetching history for {contract.asset.name}/{contract.quote_name} "
+            f"after {after_timestamp}"
+        )
 
-        points = await exchange_adapter.fetch_history_after(symbol, after_timestamp)
+        points = await exchange_adapter.fetch_history_after(contract, after_timestamp)
 
         if not points:
-            logger.debug(f"No new funding points for {symbol}")
+            logger.debug(f"No new funding points for {contract.asset.name}/{contract.quote_name}")
             return 0
 
         funding_records = [
@@ -160,7 +159,8 @@ async def update_contract(
         await uow.historical_funding_records.bulk_insert_ignore(funding_records)
 
         logger.debug(
-            f"Updated {len(points)} funding points for {symbol} "
+            f"Updated {len(points)} funding points for "
+            f"{contract.asset.name}/{contract.quote_name} "
             f"(newest: {max(p.timestamp for p in points)})"
         )
 

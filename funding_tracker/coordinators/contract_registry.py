@@ -11,13 +11,13 @@ from funding_tracker.shared.models.section import Section
 from funding_tracker.unit_of_work import UOWFactoryType
 
 if TYPE_CHECKING:
-    from funding_tracker.exchanges.protocol import ExchangeAdapter
+    from funding_tracker.exchanges.base import BaseExchange
 
 logger = logging.getLogger(__name__)
 
 
 async def register_contracts(
-    exchange_adapter: "ExchangeAdapter",
+    exchange_adapter: "BaseExchange",
     section_name: str,
     uow_factory: UOWFactoryType,
     mv_refresher: MaterializedViewRefresher | None = None,

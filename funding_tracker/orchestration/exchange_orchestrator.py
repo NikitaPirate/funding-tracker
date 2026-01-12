@@ -8,13 +8,12 @@ from typing import TYPE_CHECKING
 from funding_tracker.coordinators.contract_registry import register_contracts
 from funding_tracker.coordinators.history_fetcher import sync_contract, update_contract
 from funding_tracker.coordinators.live_collector import collect_live
-from funding_tracker.coordinators.symbol_assembler import assemble_symbol
 from funding_tracker.materialized_view_refresher import MaterializedViewRefresher
 from funding_tracker.shared.models.contract import Contract
 from funding_tracker.unit_of_work import UOWFactoryType
 
 if TYPE_CHECKING:
-    from funding_tracker.exchanges.protocol import ExchangeAdapter
+    from funding_tracker.exchanges.base import BaseExchange
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class ExchangeOrchestrator:
 
     def __init__(
         self,
-        exchange_adapter: "ExchangeAdapter",
+        exchange_adapter: "BaseExchange",
         section_name: str,
         uow_factory: UOWFactoryType,
         semaphore: asyncio.Semaphore,
@@ -82,14 +81,12 @@ class ExchangeOrchestrator:
                             self._exchange_adapter,
                             contract,
                             self._uow_factory,
-                            assemble_symbol,
                         )
                     else:
                         points = await update_contract(
                             self._exchange_adapter,
                             contract,
                             self._uow_factory,
-                            assemble_symbol,
                         )
                     return (1 if points > 0 else 0, points)
                 except Exception as e:
@@ -125,7 +122,6 @@ class ExchangeOrchestrator:
                 self._exchange_adapter,
                 self._section_name,
                 self._uow_factory,
-                assemble_symbol,
                 self._semaphore,
             )
         except Exception as e:

@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from httpx import HTTPError
@@ -12,16 +11,15 @@ from funding_tracker.shared.models.live_funding_point import LiveFundingPoint
 from funding_tracker.unit_of_work import UOWFactoryType
 
 if TYPE_CHECKING:
-    from funding_tracker.exchanges.protocol import ExchangeAdapter
+    from funding_tracker.exchanges.base import BaseExchange
 
 logger = logging.getLogger(__name__)
 
 
 async def collect_live(
-    exchange_adapter: "ExchangeAdapter",
+    exchange_adapter: "BaseExchange",
     section_name: str,
     uow_factory: UOWFactoryType,
-    assemble_symbol: Callable[[str, Contract], str],
     semaphore: asyncio.Semaphore,
 ) -> None:
     """Collect unsettled rates; uses batch API if available, else parallel calls."""
@@ -42,7 +40,7 @@ async def collect_live(
         all_rates = await exchange_adapter.fetch_live_batch()
         live_records = []
         for contract in contracts:
-            symbol = assemble_symbol(contract.section_name, contract)
+            symbol = exchange_adapter._format_symbol(contract)
             rate = all_rates.get(symbol)
             if rate is None:
                 logger.warning(
@@ -66,8 +64,7 @@ async def collect_live(
         ) -> LiveFundingPoint | None:
             async with semaphore:
                 try:
-                    symbol = assemble_symbol(contract.section_name, contract)
-                    rate = await exchange_adapter.fetch_live(symbol)
+                    rate = await exchange_adapter.fetch_live(contract)
                     return LiveFundingPoint(
                         contract_id=contract.id,
                         timestamp=rate.timestamp,
