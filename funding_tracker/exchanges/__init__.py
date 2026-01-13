@@ -14,6 +14,7 @@ from funding_tracker.exchanges import (
     dydx,
     hyperliquid,
     kucoin,
+    lighter,
 )
 from funding_tracker.exchanges.base import BaseExchange
 
@@ -48,6 +49,7 @@ def _build_registry() -> dict[str, BaseExchange]:
         "derive": derive.DeriveExchange,
         "dydx": dydx.DydxExchange,
         "kucoin": kucoin.KucoinExchange,
+        "lighter": lighter.LighterExchange,
     }
 
     registry = {}
