@@ -11,6 +11,7 @@ from funding_tracker.exchanges import (
     binance_usdm,
     bybit,
     derive,
+    dydx,
     hyperliquid,
 )
 from funding_tracker.exchanges.base import BaseExchange
@@ -44,6 +45,7 @@ def _build_registry() -> dict[str, BaseExchange]:
         "binance_coin-m": binance_coinm.BinanceCoinmExchange,
         "backpack": backpack.BackpackExchange,
         "derive": derive.DeriveExchange,
+        "dydx": dydx.DydxExchange,
     }
 
     registry = {}
