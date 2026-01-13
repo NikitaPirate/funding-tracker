@@ -91,7 +91,7 @@ class KucoinExchange(BaseExchange):
             raise RuntimeError(f"KuCoin API error for {symbol}: {response}")
 
         points = []
-        raw_records = response.get("data", [])
+        raw_records = response.get("data") or []
 
         for raw_record in raw_records:
             rate = float(raw_record["fundingRate"])
