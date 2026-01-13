@@ -75,7 +75,11 @@ async def bootstrap(
         logger.info(f"Bootstrapping funding tracker for exchanges: {exchanges}")
 
     # Initialize shared dependencies
-    uow_factory = create_uow_factory(UnitOfWork, db_connection)
+    uow_factory = create_uow_factory(
+        UnitOfWork,
+        db_connection,
+        engine_kwargs={"pool_size": 10, "max_overflow": 40},
+    )
     mv_refresher = MaterializedViewRefresher(
         uow_factory,
         debounce_seconds=mv_refresher_debounce,
