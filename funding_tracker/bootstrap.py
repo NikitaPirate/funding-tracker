@@ -78,7 +78,7 @@ async def bootstrap(
     uow_factory = create_uow_factory(
         UnitOfWork,
         db_connection,
-        engine_kwargs={"pool_size": 10, "max_overflow": 40},
+        engine_kwargs={"pool_size": 30, "max_overflow": 200},
     )
     mv_refresher = MaterializedViewRefresher(
         uow_factory,
