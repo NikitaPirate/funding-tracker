@@ -1,5 +1,6 @@
 """Base exchange adapter using ABC."""
 
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 
@@ -22,6 +23,10 @@ class BaseExchange(ABC):
     Calculated using MINIMUM funding interval to avoid exceeding API limits.
     Document per-exchange reasoning in class docstring.
     """
+
+    @property
+    def logger(self) -> logging.Logger:
+        return logging.getLogger(f"funding_tracker.exchanges.{self.EXCHANGE_ID}")
 
     def __init_subclass__(cls) -> None:
         """Validate subclass implements required methods."""

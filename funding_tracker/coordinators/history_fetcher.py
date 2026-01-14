@@ -49,9 +49,8 @@ async def sync_contract(
             # minus 1 second to avoid refetching the oldest point
             before_timestamp = oldest.timestamp - timedelta(seconds=1) if oldest else None
 
-        logger.debug(
-            f"Sync batch #{batch_count} for {contract.asset.name}/{contract.quote_name}: "
-            f"fetching before {before_timestamp or 'beginning'}"
+        exchange_adapter.logger.debug(
+            f"Sync batch #{batch_count}: fetching before {before_timestamp or 'beginning'}"
         )
 
         points = await exchange_adapter.fetch_history_before(contract, before_timestamp)
@@ -83,9 +82,8 @@ async def sync_contract(
         batch_points = len(points)
         total_points += batch_points
 
-        logger.debug(
-            f"Sync batch #{batch_count} for {contract.asset.name}/{contract.quote_name}: "
-            f"{batch_points} points "
+        exchange_adapter.logger.debug(
+            f"Sync batch #{batch_count}: {batch_points} points "
             f"(oldest: {min(p.timestamp for p in points)}, "
             f"newest: {max(p.timestamp for p in points)})"
         )
@@ -136,15 +134,12 @@ async def update_contract(
             )
             return 0
 
-        logger.debug(
-            f"Fetching history for {contract.asset.name}/{contract.quote_name} "
-            f"after {after_timestamp}"
-        )
+        exchange_adapter.logger.debug(f"Fetching after {after_timestamp}")
 
         points = await exchange_adapter.fetch_history_after(contract, after_timestamp)
 
         if not points:
-            logger.debug(f"No new funding points for {contract.asset.name}/{contract.quote_name}")
+            exchange_adapter.logger.debug("No new funding points returned")
             return 0
 
         funding_records = [
@@ -158,10 +153,8 @@ async def update_contract(
 
         await uow.historical_funding_records.bulk_insert_ignore(funding_records)
 
-        logger.debug(
-            f"Updated {len(points)} funding points for "
-            f"{contract.asset.name}/{contract.quote_name} "
-            f"(newest: {max(p.timestamp for p in points)})"
+        exchange_adapter.logger.debug(
+            f"Fetched {len(points)} points (newest: {max(p.timestamp for p in points)})"
         )
 
         return len(points)
