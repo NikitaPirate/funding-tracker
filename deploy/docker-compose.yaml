@@ -28,6 +28,8 @@ services:
     depends_on:
       timescaledb:
         condition: service_healthy
+    environment:
+      DEBUG_EXCHANGES: ${DEBUG_EXCHANGES:-}
     env_file:
       - .env
     volumes:

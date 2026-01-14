@@ -39,6 +39,22 @@ class Settings(BaseSettings):
     )
 
     db_connection: str = Field(alias="DB_CONNECTION")
+    debug_exchanges: str | None = Field(default=None, alias="DEBUG_EXCHANGES")
+
+
+def _configure_debug_logging(exchanges_spec: str | None) -> None:
+    if not exchanges_spec:
+        return
+
+    exchanges = [e.strip() for e in exchanges_spec.split(",") if e.strip()]
+    if not exchanges:
+        return
+
+    logger.info(f"Enabling DEBUG logging for exchanges: {exchanges}")
+
+    for exchange_name in exchanges:
+        exchange_logger = logging.getLogger(f"funding_tracker.exchanges.{exchange_name}")
+        exchange_logger.setLevel(logging.DEBUG)
 
 
 async def run_scheduler(db_connection: str) -> None:
@@ -58,6 +74,7 @@ def main() -> None:
     except Exception as e:
         sys.exit(f"Configuration error: {e}")
 
+    _configure_debug_logging(settings.debug_exchanges)
     logger.info("Starting funding tracker application...")
 
     try:
