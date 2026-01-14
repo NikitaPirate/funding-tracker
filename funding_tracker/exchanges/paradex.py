@@ -65,20 +65,20 @@ class ParadexExchange(BaseExchange):
         response = await http_client.get(f"{self.API_ENDPOINT}/markets")
 
         assert isinstance(response, dict)
-        markets = response.get("results", [])
+        markets = response["results"]
 
         contracts = []
         for market in markets:
             # Paradex perpetuals have asset_kind = "PERP"
-            if market.get("asset_kind") != "PERP":
+            if market["asset_kind"] != "PERP":
                 continue
 
             # Symbol format: BTC-USD-PERP
-            symbol = market.get("symbol", "")
+            symbol = market["symbol"]
             if not symbol.endswith("-USD-PERP"):
                 continue
 
-            asset_name = market.get("base_currency", "")
+            asset_name = market["base_currency"]
 
             contracts.append(
                 ContractInfo(
@@ -135,7 +135,7 @@ class ParadexExchange(BaseExchange):
         )
 
         assert isinstance(response, dict)
-        raw_records = response.get("results", [])
+        raw_records = response["results"]
 
         if not raw_records:
             logger.debug(f"No funding records for {self.EXCHANGE_ID}/{symbol}")
@@ -230,7 +230,7 @@ class ParadexExchange(BaseExchange):
                 )
 
                 assert isinstance(response, dict)
-                raw_records = response.get("results", [])
+                raw_records = response["results"]
 
                 if raw_records:
                     # Aggregate this hour's records
@@ -271,8 +271,8 @@ class ParadexExchange(BaseExchange):
         hourly_groups: dict[int, list[float]] = {}
 
         for record in raw_records:
-            created_at_ms = record.get("created_at", 0)
-            rate = float(record.get("funding_rate", 0))
+            created_at_ms = record["created_at"]
+            rate = float(record["funding_rate"])
 
             # Find hour boundary (end of hour)
             hour_end_dt = datetime.fromtimestamp(created_at_ms / 1000)
@@ -331,13 +331,13 @@ class ParadexExchange(BaseExchange):
         )
 
         assert isinstance(response, dict)
-        data = response.get("results", [])
+        data = response["results"]
 
         if not data:
             raise ValueError(f"No funding rate data for {symbol}")
 
         record = data[0]
-        raw_rate = float(record.get("funding_rate", 0))
+        raw_rate = float(record["funding_rate"])
 
         # Store in live cache for fetch_after optimization
         now = datetime.now()
