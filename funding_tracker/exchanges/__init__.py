@@ -12,6 +12,7 @@ from funding_tracker.exchanges import (
     bybit,
     derive,
     dydx,
+    extended,
     hyperliquid,
     kucoin,
     lighter,
@@ -44,13 +45,14 @@ def _validate_exchange(exchange_class: type[BaseExchange], name: str) -> None:
 def _build_registry() -> dict[str, BaseExchange]:
     """Build EXCHANGES registry with validation and instantiation."""
     exchange_classes: dict[str, type[BaseExchange]] = {
-        "hyperliquid": hyperliquid.HyperliquidExchange,
-        "bybit": bybit.BybitExchange,
+        "backpack": backpack.BackpackExchange,
         "binance_usd-m": binance_usdm.BinanceUsdmExchange,
         "binance_coin-m": binance_coinm.BinanceCoinmExchange,
-        "backpack": backpack.BackpackExchange,
+        "bybit": bybit.BybitExchange,
         "derive": derive.DeriveExchange,
         "dydx": dydx.DydxExchange,
+        "extended": extended.ExtendedExchange,
+        "hyperliquid": hyperliquid.HyperliquidExchange,
         "kucoin": kucoin.KucoinExchange,
         "lighter": lighter.LighterExchange,
         "okx": okx.OkxExchange,
