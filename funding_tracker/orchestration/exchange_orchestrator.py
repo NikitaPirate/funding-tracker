@@ -55,7 +55,7 @@ class ExchangeOrchestrator:
             return
 
         async with self._uow_factory() as uow:
-            contracts = await uow.contracts.get_by_section(self._section_name)
+            contracts = await uow.contracts.get_active_by_section(self._section_name)
 
         if not contracts:
             logger.warning(f"No contracts found for {self._section_name}")
