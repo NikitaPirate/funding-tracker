@@ -74,6 +74,24 @@ async def bootstrap(
     else:
         logger.info(f"Bootstrapping funding tracker for exchanges: {exchanges}")
 
+        # Validate all requested exchanges exist
+        available = set(EXCHANGES.keys())
+        requested = set(exchanges)
+        unknown = requested - available
+
+        if unknown:
+            logger.warning(
+                f"Unknown exchange IDs will be skipped: {sorted(unknown)}. "
+                f"Available: {sorted(available)}"
+            )
+
+            # Filter to only valid exchanges
+            exchanges = [e for e in exchanges if e in available]
+
+            if not exchanges:
+                logger.error("No valid exchanges remaining after filtering")
+                raise KeyError(f"All requested exchanges are unknown: {sorted(unknown)}")
+
     # Initialize shared dependencies
     uow_factory = create_uow_factory(
         UnitOfWork,

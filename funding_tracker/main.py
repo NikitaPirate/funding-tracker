@@ -1,5 +1,6 @@
 """Entry point for funding tracker application."""
 
+import argparse
 import os
 
 # Force UTC timezone for entire application
@@ -40,6 +41,7 @@ class Settings(BaseSettings):
 
     db_connection: str = Field(alias="DB_CONNECTION")
     debug_exchanges: str | None = Field(default=None, alias="DEBUG_EXCHANGES")
+    exchanges: str | None = Field(default=None, alias="EXCHANGES")
 
 
 def _configure_debug_logging(exchanges_spec: str | None) -> None:
@@ -57,9 +59,40 @@ def _configure_debug_logging(exchanges_spec: str | None) -> None:
         exchange_logger.setLevel(logging.DEBUG)
 
 
-async def run_scheduler(db_connection: str) -> None:
+def _parse_exchanges_arg(exchanges_str: str | None) -> list[str] | None:
+    """Parse comma-separated exchanges string into list.
+
+    Returns None if empty/None (meaning "run all exchanges").
+    Validates against available exchanges and logs warnings for unknown IDs.
+    """
+    if not exchanges_str:
+        return None
+
+    exchanges = [e.strip() for e in exchanges_str.split(",") if e.strip()]
+    if not exchanges:
+        return None
+
+    from funding_tracker.exchanges import EXCHANGES
+
+    available = set(EXCHANGES.keys())
+    requested = set(exchanges)
+    unknown = requested - available
+
+    if unknown:
+        logger.warning(
+            f"Unknown exchange IDs requested: {sorted(unknown)}. "
+            f"Available exchanges: {sorted(available)}"
+        )
+
+    valid = sorted(requested & available)
+    logger.info(f"Filtered to {len(valid)} exchange(s): {valid}")
+
+    return valid if valid else None
+
+
+async def run_scheduler(db_connection: str, exchanges: list[str] | None = None) -> None:
     """Bootstrap and run the funding scheduler."""
-    scheduler = await bootstrap(db_connection=db_connection)
+    scheduler = await bootstrap(db_connection=db_connection, exchanges=exchanges)
     scheduler.start()
     logger.info("Scheduler started, waiting for jobs...")
 
@@ -69,16 +102,75 @@ async def run_scheduler(db_connection: str) -> None:
 
 def main() -> None:
     """Main entry point for funding tracker."""
+    # Parse CLI arguments first
+    parser = argparse.ArgumentParser(
+        description="Funding tracker - Crypto funding rate collection and analysis",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run all exchanges (default)
+  funding-tracker
+
+  # Run specific exchanges via CLI
+  funding-tracker --exchanges hyperliquid,bybit
+
+  # Run single exchange
+  funding-tracker --exchanges hyperliquid
+
+  # Enable debug logging for specific exchanges
+  funding-tracker --exchanges hyperliquid --debug-exchanges hyperliquid,bybit
+
+Environment Variables:
+  EXCHANGES          Comma-separated list of exchanges (overridden by CLI)
+  DEBUG_EXCHANGES    Comma-separated list for debug logging (independent of execution)
+
+Available exchanges:
+  aster, backpack, binance_usd-m, binance_coin-m, bybit, derive, dydx,
+  extended, hyperliquid, kucoin, lighter, okx, pacifica, paradex
+        """,
+    )
+
+    parser.add_argument(
+        "--exchanges",
+        type=str,
+        help="Comma-separated list of exchanges to run (default: all). "
+        "Example: --exchanges hyperliquid,bybit",
+    )
+
+    parser.add_argument(
+        "--debug-exchanges",
+        type=str,
+        help="Comma-separated list of exchanges for DEBUG logging (independent of execution). "
+        "Example: --debug-exchanges hyperliquid,bybit",
+    )
+
+    args = parser.parse_args()
+
+    # Load settings from environment
     try:
         settings = Settings()  # type: ignore[call-arg]
     except Exception as e:
         sys.exit(f"Configuration error: {e}")
 
-    _configure_debug_logging(settings.debug_exchanges)
-    logger.info("Starting funding tracker application...")
+    # CLI arguments override environment variables
+    exchanges_arg = args.exchanges if args.exchanges else settings.exchanges
+    debug_exchanges_arg = (
+        args.debug_exchanges if args.debug_exchanges else settings.debug_exchanges
+    )
+
+    # Parse exchanges list
+    exchanges = _parse_exchanges_arg(exchanges_arg)
+
+    # Configure debug logging
+    _configure_debug_logging(debug_exchanges_arg)
+
+    if exchanges:
+        logger.info(f"Starting funding tracker with {len(exchanges)} exchange(s): {exchanges}")
+    else:
+        logger.info("Starting funding tracker with all exchanges")
 
     try:
-        asyncio.run(run_scheduler(db_connection=settings.db_connection))
+        asyncio.run(run_scheduler(db_connection=settings.db_connection, exchanges=exchanges))
     except KeyboardInterrupt:
         logger.info("Application stopped by user")
     except Exception as e:
