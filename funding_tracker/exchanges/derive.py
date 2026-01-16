@@ -29,8 +29,6 @@ class DeriveExchange(BaseExchange):
         return f"{contract.asset.name}-PERP"
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         all_instruments = []
         page = 1
 
@@ -74,19 +72,12 @@ class DeriveExchange(BaseExchange):
                     )
                 )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def _fetch_history(
         self, contract: Contract, start_ms: int, end_ms: int
     ) -> list[FundingPoint]:
         symbol = self._format_symbol(contract)
-
-        logger.debug(
-            f"Fetching history for {self.EXCHANGE_ID}/{symbol} "
-            f"from {datetime.fromtimestamp(start_ms / 1000)} "
-            f"to {datetime.fromtimestamp(end_ms / 1000)}"
-        )
 
         response = await http_client.post(
             f"{self.API_ENDPOINT}/get_funding_rate_history",
@@ -108,12 +99,9 @@ class DeriveExchange(BaseExchange):
                 timestamp = datetime.fromtimestamp(raw_record["timestamp"] / 1000.0)
                 points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        self.logger_live.debug("Fetching live rates batch")
-
         response = await http_client.post(
             f"{self.API_ENDPOINT}/get_all_instruments",
             json={
@@ -143,7 +131,6 @@ class DeriveExchange(BaseExchange):
                 funding_rate = float(instrument["perp_details"]["funding_rate"])
                 rates[instrument_name] = FundingPoint(rate=funding_rate, timestamp=now)
 
-        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

@@ -29,8 +29,6 @@ class BackpackExchange(BaseExchange):
         return f"{contract.asset.name}_{contract.quote_name}_PERP_{contract.funding_interval}"
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         response = await http_client.get(f"{self.API_ENDPOINT}/markets")
 
         assert isinstance(response, list)
@@ -51,7 +49,6 @@ class BackpackExchange(BaseExchange):
                     )
                 )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def fetch_history_before(
@@ -84,7 +81,6 @@ class BackpackExchange(BaseExchange):
             timestamp = datetime.fromisoformat(raw_record["intervalEndTimestamp"])
             points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{api_symbol}")
         return points
 
     async def fetch_history_after(
@@ -119,7 +115,6 @@ class BackpackExchange(BaseExchange):
             rate = float(raw_record["fundingRate"])
             points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{api_symbol}")
         return points
 
     async def _fetch_history(
@@ -152,7 +147,6 @@ class BackpackExchange(BaseExchange):
             timestamp = datetime.fromisoformat(raw_record["intervalEndTimestamp"])
             points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{api_symbol}")
         return points
 
     async def _fetch_live_single(self, contract: Contract) -> FundingPoint:

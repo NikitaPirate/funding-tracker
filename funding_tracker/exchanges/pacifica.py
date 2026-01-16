@@ -30,8 +30,6 @@ class PacificaExchange(BaseExchange):
         return contract.asset.name
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         response: Any = await http_client.get(f"{self.API_ENDPOINT}/info")
 
         assert isinstance(response, dict)
@@ -54,19 +52,12 @@ class PacificaExchange(BaseExchange):
                 )
             )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def _fetch_history(
         self, contract: Contract, start_ms: int, end_ms: int
     ) -> list[FundingPoint]:
         symbol = self._format_symbol(contract)
-
-        logger.debug(
-            f"Fetching history for {self.EXCHANGE_ID}/{symbol} "
-            f"from {datetime.fromtimestamp(start_ms / 1000)} "
-            f"to {datetime.fromtimestamp(end_ms / 1000)}"
-        )
 
         points = []
         cursor = None
@@ -120,12 +111,9 @@ class PacificaExchange(BaseExchange):
             if len(points) >= 4000:
                 break
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        self.logger_live.debug("Fetching live rates batch")
-
         response: Any = await http_client.get(f"{self.API_ENDPOINT}/info/prices")
 
         assert isinstance(response, dict)
@@ -147,7 +135,6 @@ class PacificaExchange(BaseExchange):
                 rate = float(funding_rate)
                 rates[symbol] = FundingPoint(rate=rate, timestamp=now)
 
-        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

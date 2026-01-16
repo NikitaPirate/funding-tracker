@@ -26,14 +26,18 @@ class BaseExchange(ABC):
 
     @property
     def logger(self) -> logging.Logger:
+        """Exchange logger for use in coordinators.
+
+        Enables per-exchange log control via LOGLEVEL=funding_tracker.exchanges.{EXCHANGE_ID}:LEVEL
+        """
         return logging.getLogger(f"funding_tracker.exchanges.{self.EXCHANGE_ID}")
 
     @property
     def logger_live(self) -> logging.Logger:
         """Dedicated logger for live collection operations.
 
-        Child logger of self.logger with independent level control.
-        Logger name: funding_tracker.exchanges.{EXCHANGE_ID}.live
+        Enables independent live log control via DEBUG_EXCHANGES_LIVE or per-exchange:
+        LOGLEVEL=funding_tracker.exchanges.{EXCHANGE_ID}.live:LEVEL
         """
         return logging.getLogger(f"funding_tracker.exchanges.{self.EXCHANGE_ID}.live")
 

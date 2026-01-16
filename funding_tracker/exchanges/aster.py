@@ -188,12 +188,6 @@ class AsterExchange(BaseExchange):
     ) -> list[FundingPoint]:
         symbol = self._format_symbol(contract)
 
-        logger.debug(
-            f"Fetching history for {self.EXCHANGE_ID}/{symbol} "
-            f"from {datetime.fromtimestamp(start_ms / 1000)} "
-            f"to {datetime.fromtimestamp(end_ms / 1000)}"
-        )
-
         response = await http_client.get(
             f"{self.API_ENDPOINT}/v1/fundingRate",
             params={
@@ -214,7 +208,6 @@ class AsterExchange(BaseExchange):
                 timestamp = datetime.fromtimestamp(record["fundingTime"] / 1000)
                 points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
@@ -222,8 +215,6 @@ class AsterExchange(BaseExchange):
 
         Similar to Backpack/Extended pattern - all markets in one request.
         """
-        self.logger_live.debug("Fetching live rates batch")
-
         response = await http_client.get(f"{self.API_ENDPOINT}/v1/premiumIndex")
 
         markets = response
@@ -236,7 +227,6 @@ class AsterExchange(BaseExchange):
             rate = float(market["lastFundingRate"])
             rates[symbol] = FundingPoint(rate=rate, timestamp=now)
 
-        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

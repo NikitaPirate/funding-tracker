@@ -60,8 +60,6 @@ class ParadexExchange(BaseExchange):
         return f"{contract.asset.name}-USD-PERP"
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         response = await http_client.get(f"{self.API_ENDPOINT}/markets")
 
         assert isinstance(response, dict)
@@ -89,7 +87,6 @@ class ParadexExchange(BaseExchange):
                 )
             )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def fetch_history_before(

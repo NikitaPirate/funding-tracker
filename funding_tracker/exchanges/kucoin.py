@@ -28,8 +28,6 @@ class KucoinExchange(BaseExchange):
         return f"{contract.asset.name}{contract.quote_name}M"
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         response = await http_client.get(f"{self.API_ENDPOINT}/api/v1/contracts/active")
 
         assert isinstance(response, dict)
@@ -62,19 +60,12 @@ class KucoinExchange(BaseExchange):
                 )
             )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def _fetch_history(
         self, contract: Contract, start_ms: int, end_ms: int
     ) -> list[FundingPoint]:
         symbol = self._format_symbol(contract)
-
-        logger.debug(
-            f"Fetching history for {self.EXCHANGE_ID}/{symbol} "
-            f"from {datetime.fromtimestamp(start_ms / 1000)} "
-            f"to {datetime.fromtimestamp(end_ms / 1000)}"
-        )
 
         response = await http_client.get(
             f"{self.API_ENDPOINT}/api/v1/contract/funding-rates",
@@ -98,12 +89,9 @@ class KucoinExchange(BaseExchange):
             timestamp = datetime.fromtimestamp(int(raw_record["timepoint"]) / 1000.0)
             points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        self.logger_live.debug("Fetching live rates batch")
-
         response = await http_client.get(f"{self.API_ENDPOINT}/api/v1/contracts/active")
 
         assert isinstance(response, dict)
@@ -132,7 +120,6 @@ class KucoinExchange(BaseExchange):
                     timestamp=now,
                 )
 
-        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

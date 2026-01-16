@@ -33,8 +33,6 @@ class BybitExchange(BaseExchange):
         return f"{contract.asset.name}{suffix}"
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         all_contracts = []
         cursor = None
 
@@ -65,19 +63,12 @@ class BybitExchange(BaseExchange):
                     )
                 )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def _fetch_history(
         self, contract: Contract, start_ms: int, end_ms: int
     ) -> list[FundingPoint]:
         symbol = self._format_symbol(contract)
-
-        logger.debug(
-            f"Fetching history for {self.EXCHANGE_ID}/{symbol} "
-            f"from {datetime.fromtimestamp(start_ms / 1000)} "
-            f"to {datetime.fromtimestamp(end_ms / 1000)}"
-        )
 
         response: Any = await http_client.get(
             f"{self.API_ENDPOINT}/v5/market/funding/history",
@@ -99,13 +90,10 @@ class BybitExchange(BaseExchange):
                 )
                 points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
     async def _fetch_live_single(self, contract: Contract) -> FundingPoint:
         symbol = self._format_symbol(contract)
-
-        self.logger_live.debug(f"Fetching live rate for {symbol}")
 
         response: Any = await http_client.get(
             f"{self.API_ENDPOINT}/v5/market/tickers",

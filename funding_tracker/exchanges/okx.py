@@ -29,8 +29,6 @@ class OkxExchange(BaseExchange):
         return f"{contract.asset.name}-{contract.quote_name}-SWAP"
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         response: Any = await http_client.get(
             f"{self.API_ENDPOINT}/public/instruments",
             params={"instType": "SWAP"},
@@ -51,19 +49,12 @@ class OkxExchange(BaseExchange):
                         )
                     )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def _fetch_history(
         self, contract: Contract, start_ms: int, end_ms: int
     ) -> list[FundingPoint]:
         symbol = self._format_symbol(contract)
-
-        logger.debug(
-            f"Fetching history for {self.EXCHANGE_ID}/{symbol} "
-            f"from {datetime.fromtimestamp(start_ms / 1000)} "
-            f"to {datetime.fromtimestamp(end_ms / 1000)}"
-        )
 
         response: Any = await http_client.get(
             f"{self.API_ENDPOINT}/public/funding-rate-history",
@@ -83,13 +74,10 @@ class OkxExchange(BaseExchange):
                 timestamp = datetime.fromtimestamp(int(raw_record["fundingTime"]) / 1000.0)
                 points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
     async def _fetch_live_single(self, contract: Contract) -> FundingPoint:
         symbol = self._format_symbol(contract)
-
-        self.logger_live.debug(f"Fetching live rate for {symbol}")
 
         response: Any = await http_client.get(
             f"{self.API_ENDPOINT}/public/funding-rate",

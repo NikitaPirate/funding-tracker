@@ -28,8 +28,6 @@ class DydxExchange(BaseExchange):
         return f"{contract.asset.name}-USD"
 
     async def get_contracts(self) -> list[ContractInfo]:
-        logger.debug(f"Fetching contracts from {self.EXCHANGE_ID}")
-
         response = await http_client.get(
             f"{self.API_ENDPOINT}/perpetualMarkets",
             headers={"Content-Type": "application/json"},
@@ -52,19 +50,12 @@ class DydxExchange(BaseExchange):
                     )
                 )
 
-        logger.debug(f"Fetched {len(contracts)} contracts from {self.EXCHANGE_ID}")
         return contracts
 
     async def _fetch_history(
         self, contract: Contract, start_ms: int, end_ms: int
     ) -> list[FundingPoint]:
         symbol = self._format_symbol(contract)
-
-        logger.debug(
-            f"Fetching history for {self.EXCHANGE_ID}/{symbol} "
-            f"from {datetime.fromtimestamp(start_ms / 1000)} "
-            f"to {datetime.fromtimestamp(end_ms / 1000)}"
-        )
 
         # dYdX uses ISO8601 format, not milliseconds
         end_time_iso = datetime.fromtimestamp(end_ms / 1000).isoformat()
@@ -88,12 +79,9 @@ class DydxExchange(BaseExchange):
                 timestamp = datetime.fromisoformat(raw_record["effectiveAt"])
                 points.append(FundingPoint(rate=rate, timestamp=timestamp))
 
-        logger.debug(f"Fetched {len(points)} funding points for {self.EXCHANGE_ID}/{symbol}")
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        self.logger_live.debug("Fetching live rates batch")
-
         response = await http_client.get(
             f"{self.API_ENDPOINT}/perpetualMarkets",
             headers={"Content-Type": "application/json"},
@@ -112,7 +100,6 @@ class DydxExchange(BaseExchange):
                     timestamp=now,
                 )
 
-        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:
