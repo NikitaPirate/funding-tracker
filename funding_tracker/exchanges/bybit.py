@@ -3,6 +3,8 @@
 Bybit has both USDT and USDC perpetuals. API limit is 200 records per request.
 Minimal funding interval is 1 hour.
 _FETCH_STEP = 198 hours (200 - 2 safety buffer).
+
+Live rates use batch API: single /v5/market/tickers request fetches all contracts.
 """
 
 import logging
@@ -92,24 +94,32 @@ class BybitExchange(BaseExchange):
 
         return points
 
-    async def _fetch_live_single(self, contract: Contract) -> FundingPoint:
-        symbol = self._format_symbol(contract)
-
+    async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
         response: Any = await http_client.get(
             f"{self.API_ENDPOINT}/v5/market/tickers",
-            params={"symbol": symbol, "category": "linear"},
+            params={"category": "linear"},
         )
 
-        data = response.get("result", {}).get("list", [])
-        if not data:
-            raise ValueError(f"No funding rate data for {symbol}")
-
-        record = data[0]
         now = datetime.now()
-        rate = float(record["fundingRate"])
-        return FundingPoint(rate=rate, timestamp=now)
+        rates = {}
+
+        for record in response["result"]["list"]:
+            funding_rate_str = record.get("fundingRate", "")
+            if not funding_rate_str:
+                continue
+
+            symbol = record["symbol"]
+            rate = float(funding_rate_str)
+            rates[symbol] = FundingPoint(rate=rate, timestamp=now)
+
+        return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:
-        from funding_tracker.exchanges.utils import fetch_live_parallel
+        symbol_to_contract = {self._format_symbol(c): c for c in contracts}
+        all_rates = await self._fetch_all_rates()
 
-        return await fetch_live_parallel(self, contracts)
+        return {
+            symbol_to_contract[symbol]: rate
+            for symbol, rate in all_rates.items()
+            if symbol in symbol_to_contract
+        }
