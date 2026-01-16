@@ -88,7 +88,7 @@ class BinanceUsdmExchange(BaseExchange):
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        logger.debug(f"Fetching live rates batch from {self.EXCHANGE_ID}")
+        self.logger_live.debug("Fetching live rates batch")
 
         response: Any = await http_client.get(f"{self.API_ENDPOINT}/v1/premiumIndex")
 
@@ -99,7 +99,7 @@ class BinanceUsdmExchange(BaseExchange):
             rate = float(item["lastFundingRate"])
             rates[symbol] = FundingPoint(rate=rate, timestamp=now)
 
-        logger.debug(f"Fetched {len(rates)} live rates from {self.EXCHANGE_ID}")
+        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

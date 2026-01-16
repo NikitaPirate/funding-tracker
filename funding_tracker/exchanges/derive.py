@@ -112,7 +112,7 @@ class DeriveExchange(BaseExchange):
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        logger.debug(f"Fetching live rates batch from {self.EXCHANGE_ID}")
+        self.logger_live.debug("Fetching live rates batch")
 
         response = await http_client.post(
             f"{self.API_ENDPOINT}/get_all_instruments",
@@ -143,7 +143,7 @@ class DeriveExchange(BaseExchange):
                 funding_rate = float(instrument["perp_details"]["funding_rate"])
                 rates[instrument_name] = FundingPoint(rate=funding_rate, timestamp=now)
 
-        logger.debug(f"Fetched {len(rates)} live rates from {self.EXCHANGE_ID}")
+        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

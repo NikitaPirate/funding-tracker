@@ -102,7 +102,7 @@ class KucoinExchange(BaseExchange):
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        logger.debug(f"Fetching live rates batch from {self.EXCHANGE_ID}")
+        self.logger_live.debug("Fetching live rates batch")
 
         response = await http_client.get(f"{self.API_ENDPOINT}/api/v1/contracts/active")
 
@@ -132,7 +132,7 @@ class KucoinExchange(BaseExchange):
                     timestamp=now,
                 )
 
-        logger.debug(f"Fetched {len(rates)} live rates from {self.EXCHANGE_ID}")
+        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

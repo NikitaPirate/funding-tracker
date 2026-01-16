@@ -110,7 +110,7 @@ class ExtendedExchange(BaseExchange):
         Extended provides batch API that returns all markets at once.
         Similar to Backpack exchange pattern.
         """
-        logger.debug(f"Fetching live rates batch from {self.EXCHANGE_ID}")
+        self.logger_live.debug("Fetching live rates batch")
 
         response = await http_client.get(f"{self.API_ENDPOINT}/api/v1/info/markets")
 
@@ -134,7 +134,7 @@ class ExtendedExchange(BaseExchange):
                 rate = float(funding_rate)
                 rates[symbol] = FundingPoint(rate=rate, timestamp=now)
 
-        logger.debug(f"Fetched {len(rates)} live rates from {self.EXCHANGE_ID}")
+        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

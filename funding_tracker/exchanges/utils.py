@@ -51,10 +51,14 @@ async def fetch_live_parallel(
             try:
                 return await exchange._fetch_live_single(contract)
             except HTTPError as e:
-                logger.warning(f"Failed to fetch live rate for {contract.asset.name}: {e}")
+                exchange.logger_live.warning(
+                    f"Failed to fetch live rate for {contract.asset.name}: {e}"
+                )
                 return None
             except ValueError as e:
-                logger.warning(f"Invalid funding rate data for {contract.asset.name}: {e}")
+                exchange.logger_live.warning(
+                    f"Invalid funding rate data for {contract.asset.name}: {e}"
+                )
                 return None
 
     semaphore = asyncio.Semaphore(10)

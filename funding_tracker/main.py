@@ -15,6 +15,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from funding_tracker.bootstrap import bootstrap
+from funding_tracker.exchanges import EXCHANGES
 
 load_dotenv()
 
@@ -44,6 +45,7 @@ class Settings(BaseSettings):
 
     db_connection: str = Field(alias="DB_CONNECTION")
     debug_exchanges: str | None = Field(default=None, alias="DEBUG_EXCHANGES")
+    debug_exchanges_live: str | None = Field(default=None, alias="DEBUG_EXCHANGES_LIVE")
     exchanges: str | None = Field(default=None, alias="EXCHANGES")
 
 
@@ -62,6 +64,22 @@ def _configure_debug_logging(exchanges_spec: str | None) -> None:
         exchange_logger.setLevel(logging.DEBUG)
 
 
+def _configure_live_logging(exchanges_spec: str | None) -> None:
+    """Configure debug logging for live collection operations."""
+    if not exchanges_spec:
+        return
+
+    exchanges = [e.strip() for e in exchanges_spec.split(",") if e.strip()]
+    if not exchanges:
+        return
+
+    logger.info(f"Enabling DEBUG logging for live collection: {exchanges}")
+
+    for exchange_name in exchanges:
+        live_logger = logging.getLogger(f"funding_tracker.exchanges.{exchange_name}.live")
+        live_logger.setLevel(logging.DEBUG)
+
+
 def _parse_exchanges_arg(exchanges_str: str | None) -> list[str] | None:
     """Parse comma-separated exchanges string into list.
 
@@ -74,8 +92,6 @@ def _parse_exchanges_arg(exchanges_str: str | None) -> list[str] | None:
     exchanges = [e.strip() for e in exchanges_str.split(",") if e.strip()]
     if not exchanges:
         return None
-
-    from funding_tracker.exchanges import EXCHANGES
 
     available = set(EXCHANGES.keys())
     requested = set(exchanges)
@@ -147,6 +163,12 @@ Available exchanges:
         "Example: --debug-exchanges hyperliquid,bybit",
     )
 
+    parser.add_argument(
+        "--debug-exchanges-live",
+        type=str,
+        help="Comma-separated list for live collection DEBUG (independent of general debug)",
+    )
+
     args = parser.parse_args()
 
     # Load settings from environment
@@ -160,12 +182,16 @@ Available exchanges:
     debug_exchanges_arg = (
         args.debug_exchanges if args.debug_exchanges else settings.debug_exchanges
     )
+    debug_exchanges_live_arg = (
+        args.debug_exchanges_live if args.debug_exchanges_live else settings.debug_exchanges_live
+    )
 
     # Parse exchanges list
     exchanges = _parse_exchanges_arg(exchanges_arg)
 
     # Configure debug logging
     _configure_debug_logging(debug_exchanges_arg)
+    _configure_live_logging(debug_exchanges_live_arg)
 
     if exchanges:
         logger.info(f"Starting funding tracker with {len(exchanges)} exchange(s): {exchanges}")

@@ -28,6 +28,15 @@ class BaseExchange(ABC):
     def logger(self) -> logging.Logger:
         return logging.getLogger(f"funding_tracker.exchanges.{self.EXCHANGE_ID}")
 
+    @property
+    def logger_live(self) -> logging.Logger:
+        """Dedicated logger for live collection operations.
+
+        Child logger of self.logger with independent level control.
+        Logger name: funding_tracker.exchanges.{EXCHANGE_ID}.live
+        """
+        return logging.getLogger(f"funding_tracker.exchanges.{self.EXCHANGE_ID}.live")
+
     def __init_subclass__(cls) -> None:
         """Validate subclass implements required methods."""
         super().__init_subclass__()

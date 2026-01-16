@@ -98,7 +98,7 @@ class LighterExchange(BaseExchange):
         return points
 
     async def _fetch_all_rates(self) -> dict[str, FundingPoint]:
-        logger.debug(f"Fetching live rates batch from {self.EXCHANGE_ID}")
+        self.logger_live.debug("Fetching live rates batch")
 
         rates = {}
 
@@ -119,7 +119,7 @@ class LighterExchange(BaseExchange):
                         rate=float(funding_rate) / 100, timestamp=datetime.now()
                     )
 
-        logger.debug(f"Fetched {len(rates)} live rates from {self.EXCHANGE_ID}")
+        self.logger_live.debug(f"Fetched {len(rates)} live rates")
         return rates
 
     async def fetch_live(self, contracts: list[Contract]) -> dict[Contract, FundingPoint]:

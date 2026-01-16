@@ -89,7 +89,7 @@ class OkxExchange(BaseExchange):
     async def _fetch_live_single(self, contract: Contract) -> FundingPoint:
         symbol = self._format_symbol(contract)
 
-        logger.debug(f"Fetching live rate for {self.EXCHANGE_ID}/{symbol}")
+        self.logger_live.debug(f"Fetching live rate for {symbol}")
 
         response: Any = await http_client.get(
             f"{self.API_ENDPOINT}/public/funding-rate",
