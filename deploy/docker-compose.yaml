@@ -4,6 +4,8 @@ services:
     container_name: funding-tracker-db
     restart: unless-stopped
 
+    command: postgres -c max_locks_per_transaction=512 -c shared_buffers=256MB -c max_connections=200
+
     environment:
       POSTGRES_DB: funding_tracker
       POSTGRES_USER: postgres
@@ -31,6 +33,7 @@ services:
     environment:
       EXCHANGES: ${EXCHANGES:-}
       DEBUG_EXCHANGES: ${DEBUG_EXCHANGES:-}
+      INSTANCE_COUNT: ${INSTANCE_COUNT:-3}
     env_file:
       - .env
     volumes:

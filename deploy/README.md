@@ -19,6 +19,31 @@ cp .env.example .env
 - `EXCHANGES`: Comma-separated list of exchanges to run (default: all, empty = run all)
 - `DEBUG_EXCHANGES`: Comma-separated list for DEBUG logging (independent of execution)
 
+### Multi-Instance Configuration
+
+The application supports horizontal scaling by splitting exchanges across multiple worker instances.
+
+- `INSTANCE_COUNT`: Number of worker instances (default: 3)
+  - Exchanges are distributed evenly using round-robin
+  - Each instance runs independently with autorestart
+  - All instances log to stdout/stderr
+
+Examples:
+
+```bash
+# Run with 1 instance (all exchanges on single worker)
+INSTANCE_COUNT=1 docker-compose up
+
+# Run with 3 instances (default)
+docker-compose up
+
+# Run with 5 instances
+INSTANCE_COUNT=5 docker-compose up
+
+# Check supervisord status
+docker exec funding-tracker supervisorctl status
+```
+
 ## Running
 
 ### Start all services

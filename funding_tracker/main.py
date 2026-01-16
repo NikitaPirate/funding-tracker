@@ -34,6 +34,22 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
+def _add_instance_to_logs(instance_id: int, total_instances: int) -> None:
+    """Add instance identifier to all log messages."""
+    if total_instances <= 1:
+        return  # No need for single instance
+
+    # Update format for all handlers
+    for handler in logging.root.handlers:
+        assert handler.formatter is not None
+        old_format: str = handler.formatter._fmt  # type: ignore[assignment]
+        # Insert instance_id after levelname
+        new_format = old_format.replace(
+            "%(levelname)s", f"%(levelname)s [{instance_id}/{total_instances}]"
+        )
+        handler.setFormatter(logging.Formatter(new_format))
+
+
 class Settings(BaseSettings):
     """Application settings from environment variables."""
 
@@ -47,6 +63,8 @@ class Settings(BaseSettings):
     debug_exchanges: str | None = Field(default=None, alias="DEBUG_EXCHANGES")
     debug_exchanges_live: str | None = Field(default=None, alias="DEBUG_EXCHANGES_LIVE")
     exchanges: str | None = Field(default=None, alias="EXCHANGES")
+    instance_id: int = Field(default=0, alias="INSTANCE_ID")
+    total_instances: int = Field(default=1, alias="TOTAL_INSTANCES")
 
 
 def _configure_debug_logging(exchanges_spec: str | None) -> None:
@@ -109,6 +127,21 @@ def _parse_exchanges_arg(exchanges_str: str | None) -> list[str] | None:
     return valid if valid else None
 
 
+def _filter_exchanges_by_instance(
+    exchanges: list[str], instance_id: int, total_instances: int
+) -> list[str]:
+    """Filter exchanges to those assigned to this instance.
+
+    Simple round-robin: exchanges[0::3], exchanges[1::3], exchanges[2::3]
+    Sorted list ensures consistent distribution.
+    """
+    if total_instances <= 1:
+        return exchanges  # No filtering needed for single instance
+
+    sorted_exchanges = sorted(exchanges)
+    return sorted_exchanges[instance_id::total_instances]
+
+
 async def run_scheduler(db_connection: str, exchanges: list[str] | None = None) -> None:
     """Bootstrap and run the funding scheduler."""
     scheduler = await bootstrap(db_connection=db_connection, exchanges=exchanges)
@@ -139,9 +172,22 @@ Examples:
   # Enable debug logging for specific exchanges
   funding-tracker --exchanges hyperliquid --debug-exchanges hyperliquid,bybit
 
+Instance Scaling:
+  --instance-id N      Instance identifier (default: 0)
+  --total-instances N  Total number of instances (default: 1)
+
+Examples:
+  # Run all exchanges on single instance (default)
+  funding-tracker
+
+  # Run instance 1 of 3 (distributes exchanges across instances)
+  funding-tracker --instance-id 1 --total-instances 3
+
 Environment Variables:
   EXCHANGES          Comma-separated list of exchanges (overridden by CLI)
   DEBUG_EXCHANGES    Comma-separated list for debug logging (independent of execution)
+  INSTANCE_ID        Instance identifier for multi-instance deployment
+  TOTAL_INSTANCES    Total number of instances (default: 1)
 
 Available exchanges:
   aster, backpack, binance_usd-m, binance_coin-m, bybit, derive, dydx,
@@ -169,6 +215,22 @@ Available exchanges:
         help="Comma-separated list for live collection DEBUG (independent of general debug)",
     )
 
+    parser.add_argument(
+        "--instance-id",
+        type=int,
+        default=0,
+        help="Instance identifier for multi-instance deployment (default: 0). "
+        "Used to distribute exchanges across instances.",
+    )
+
+    parser.add_argument(
+        "--total-instances",
+        type=int,
+        default=1,
+        help="Total number of instances in deployment (default: 1). "
+        "Exchanges are distributed using round-robin.",
+    )
+
     args = parser.parse_args()
 
     # Load settings from environment
@@ -185,9 +247,29 @@ Available exchanges:
     debug_exchanges_live_arg = (
         args.debug_exchanges_live if args.debug_exchanges_live else settings.debug_exchanges_live
     )
+    instance_id = args.instance_id if args.instance_id != 0 else settings.instance_id
+    total_instances = (
+        args.total_instances if args.total_instances != 1 else settings.total_instances
+    )
+
+    # Add instance identifier to logs for multi-instance deployments
+    _add_instance_to_logs(instance_id, total_instances)
 
     # Parse exchanges list
     exchanges = _parse_exchanges_arg(exchanges_arg)
+
+    # Apply instance filtering if multi-instance deployment
+    if exchanges is None:
+        exchanges = sorted(EXCHANGES.keys())
+
+    if total_instances > 1:
+        exchanges = _filter_exchanges_by_instance(exchanges, instance_id, total_instances)
+        logger.info(
+            f"Instance {instance_id}/{total_instances}: "
+            f"Running {len(exchanges)} exchange(s): {exchanges}"
+        )
+    else:
+        exchanges = None if len(exchanges) == len(EXCHANGES) else exchanges
 
     # Configure debug logging
     _configure_debug_logging(debug_exchanges_arg)
