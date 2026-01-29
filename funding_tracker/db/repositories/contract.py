@@ -2,9 +2,9 @@ from collections.abc import Iterable, Sequence
 
 from sqlalchemy.sql.expression import select
 
+from funding_tracker.db.repositories.base import Repository
+from funding_tracker.db.repositories.utils import bulk_insert
 from funding_tracker.shared.models.contract import Contract
-from funding_tracker.shared.repositories.base import Repository
-from funding_tracker.shared.repositories.utils import bulk_insert
 
 
 class ContractRepository(Repository[Contract]):

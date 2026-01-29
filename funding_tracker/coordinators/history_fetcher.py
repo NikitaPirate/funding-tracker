@@ -3,9 +3,9 @@
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
+from funding_tracker.db import UOWFactoryType
 from funding_tracker.shared.models.contract import Contract
 from funding_tracker.shared.models.historical_funding_point import HistoricalFundingPoint
-from funding_tracker.unit_of_work import UOWFactoryType
 
 if TYPE_CHECKING:
     from funding_tracker.exchanges.base import BaseExchange

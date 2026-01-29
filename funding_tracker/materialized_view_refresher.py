@@ -3,7 +3,7 @@
 import logging
 import time
 
-from funding_tracker.unit_of_work import UOWFactoryType
+from funding_tracker.db import UOWFactoryType
 
 
 class MaterializedViewRefresher:

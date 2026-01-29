@@ -2,8 +2,8 @@ from uuid import UUID
 
 from sqlalchemy.sql.expression import asc, desc, select
 
+from funding_tracker.db.repositories.base import Repository
 from funding_tracker.shared.models.historical_funding_point import HistoricalFundingPoint
-from funding_tracker.shared.repositories.base import Repository
 
 
 class HistoricalFundingPointRepository(Repository[HistoricalFundingPoint]):

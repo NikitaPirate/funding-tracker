@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 from funding_tracker.coordinators.contract_registry import register_contracts
 from funding_tracker.coordinators.history_fetcher import sync_contract, update_contract
 from funding_tracker.coordinators.live_collector import collect_live
+from funding_tracker.db import UOWFactoryType
 from funding_tracker.materialized_view_refresher import MaterializedViewRefresher
 from funding_tracker.shared.models.contract import Contract
-from funding_tracker.unit_of_work import UOWFactoryType
 
 if TYPE_CHECKING:
     from funding_tracker.exchanges.base import BaseExchange

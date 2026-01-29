@@ -12,11 +12,10 @@ from apscheduler.triggers.combining import OrTrigger
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 
+from funding_tracker.db import create_uow_factory
 from funding_tracker.exchanges import EXCHANGES
 from funding_tracker.materialized_view_refresher import MaterializedViewRefresher
 from funding_tracker.orchestration import ExchangeOrchestrator
-from funding_tracker.shared.unit_of_work import create_uow_factory
-from funding_tracker.unit_of_work import UnitOfWork
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +93,6 @@ async def bootstrap(
 
     # Initialize shared dependencies
     uow_factory = create_uow_factory(
-        UnitOfWork,
         db_connection,
         engine_kwargs={"pool_size": 30, "max_overflow": 200},
     )

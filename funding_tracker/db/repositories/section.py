@@ -1,5 +1,5 @@
+from funding_tracker.db.repositories.base import Repository
 from funding_tracker.shared.models.section import Section
-from funding_tracker.shared.repositories.base import Repository
 
 
 class SectionRepository(Repository[Section]):
